@@ -33,6 +33,7 @@ import { TreeViewsMainImpl } from './view/tree-views-main';
 import { NotificationMainImpl } from './notification-main';
 import { ConnectionMainImpl } from './connection-main';
 import { WebviewsMainImpl } from './webviews-main';
+import { DebugMainImpl } from './debug-main';
 
 export function setUpPluginApi(rpc: RPCProtocol, container: interfaces.Container): void {
     const commandRegistryMain = new CommandRegistryMainImpl(rpc, container);
@@ -84,4 +85,7 @@ export function setUpPluginApi(rpc: RPCProtocol, container: interfaces.Container
 
     const pluginConnection = new ConnectionMainImpl(rpc);
     rpc.set(PLUGIN_RPC_CONTEXT.CONNECTION_MAIN, pluginConnection);
+
+    const debugMain = new DebugMainImpl(rpc, container);
+    rpc.set(PLUGIN_RPC_CONTEXT.DEBUG_MAIN, debugMain);
 }

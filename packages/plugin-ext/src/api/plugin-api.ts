@@ -48,7 +48,9 @@ import {
     Location,
     FileWatcherSubscriberOptions,
     FileChangeEvent,
-    TextDocumentShowOptions
+    TextDocumentShowOptions,
+    Location,
+    Breakpoint
 } from './model';
 import { ExtPluginApi } from '../common/plugin-ext-api-contribution';
 import { CancellationToken, Progress, ProgressOptions } from '@theia/plugin';
@@ -864,6 +866,28 @@ export interface WebviewsMain {
     $unregisterSerializer(viewType: string): void;
 }
 
+export interface DebugExt {
+    $onSessionCustomEvent(sessionId: string, debugConfiguration: theia.DebugConfiguration, event: string, body?: any): void;
+    $breakpointsDidChange(all: Breakpoint[], added: Breakpoint[], removed: Breakpoint[], changed: Breakpoint[]): void;
+    $sessionDidCreate(sessionId: string, debugConfiguration: theia.DebugConfiguration): void;
+    $sessionDidDestroy(sessionId: string, debugConfiguration: theia.DebugConfiguration): void;
+    $sessionDidChange(sessionId: string | undefined, debugConfiguration?: theia.DebugConfiguration): void;
+    $provideDebugConfigurations(providerId: string,
+        folder: string | undefined): Promise<theia.DebugConfiguration[]>;
+    $resolveDebugConfigurations(providerId: string,
+        folder: string | undefined,
+        debugConfiguration: theia.DebugConfiguration): Promise<theia.DebugConfiguration | undefined>;
+}
+
+export interface DebugMain {
+    $appendToDebugConsole(value: string): void;
+    $appendLineToDebugConsole(value: string): void;
+    $registerDebugConfigurationProvider(debugType: string, providerId: string): void;
+    $unregisterDebugConfigurationProvider(debugType: string, providerId: string): void;
+    $addBreakpoints(breakpoints: Breakpoint[]): void;
+    $removeBreakpoints(breakpoints: Breakpoint[]): void;
+}
+
 export const PLUGIN_RPC_CONTEXT = {
     COMMAND_REGISTRY_MAIN: <ProxyIdentifier<CommandRegistryMain>>createProxyIdentifier<CommandRegistryMain>('CommandRegistryMain'),
     QUICK_OPEN_MAIN: createProxyIdentifier<QuickOpenMain>('QuickOpenMain'),
@@ -882,6 +906,7 @@ export const PLUGIN_RPC_CONTEXT = {
     LANGUAGES_MAIN: createProxyIdentifier<LanguagesMain>('LanguagesMain'),
     CONNECTION_MAIN: createProxyIdentifier<ConnectionMain>('ConnectionMain'),
     WEBVIEWS_MAIN: createProxyIdentifier<WebviewsMain>('WebviewsMain'),
+    DEBUG_MAIN: createProxyIdentifier<DebugMain>('DebugMain')
 };
 
 export const MAIN_RPC_CONTEXT = {
@@ -900,4 +925,5 @@ export const MAIN_RPC_CONTEXT = {
     LANGUAGES_EXT: createProxyIdentifier<LanguagesExt>('LanguagesExt'),
     CONNECTION_EXT: createProxyIdentifier<ConnectionExt>('ConnectionExt'),
     WEBVIEWS_EXT: createProxyIdentifier<WebviewsExt>('WebviewsExt'),
+    DEBUG_EXT: createProxyIdentifier<DebugExt>('DebugExt')
 };

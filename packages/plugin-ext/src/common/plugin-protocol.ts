@@ -20,6 +20,7 @@ import { LogPart } from './types';
 import { CharacterPair, CommentRule, PluginAPIFactory, Plugin } from '../api/plugin-api';
 import { PreferenceSchema } from '@theia/core/lib/browser/preferences';
 import { ExtPluginApi } from './plugin-ext-api-contribution';
+import { IJSONSchema } from '@theia/core/src/common/json-schema';
 
 export const hostedServicePath = '/services/hostedPlugin';
 
@@ -59,6 +60,7 @@ export interface PluginPackageContribution {
     viewsContainers?: { [location: string]: PluginPackageViewContainer[] };
     views?: { [location: string]: PluginPackageView[] };
     menus?: { [location: string]: PluginPackageMenu[] };
+    debuggers?: PluginPackageDebuggersContribution[];
 }
 
 export interface PluginPackageViewContainer {
@@ -88,6 +90,33 @@ export interface PluginPackageGrammarsContribution {
 
 export interface ScopeMap {
     [scopeName: string]: string;
+}
+
+export interface PluginPackageDebuggersContribution {
+    type: string,
+    label?: string,
+    program?: string,
+    runtime?: string,
+    enableBreakpointsFor?: { languageIds: string[] },
+    configurationAttributes?: IJSONSchema[],
+    initialConfigurations?: DebugAdapterConfiguration[],
+    configurationSnippets?: ConfigurationSnippet[],
+    variables?: ScopeMap,
+    languages?: string[],
+    adapterExecutableCommand?: string
+}
+
+export interface ConfigurationSnippet {
+    label: string,
+    description: string,
+    body: DebugAdapterConfiguration
+}
+
+export interface DebugAdapterConfiguration {
+    type: string,
+    request: string,
+    name: string
+    [key: string]: any
 }
 
 /**
