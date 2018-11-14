@@ -79,7 +79,7 @@ import {
     Breakpoint,
     SourceBreakpoint,
     FunctionBreakpoint
- } from './types-impl';
+} from './types-impl';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
 import { TextEditorsExtImpl } from './text-editors';
 import { DocumentsExtImpl } from './documents';
@@ -496,9 +496,14 @@ export function createAPIFactory(
                 return debugExt.onDidChangeBreakpoints;
             },
             registerDebugConfigurationProvider(debugType: string, provider: theia.DebugConfigurationProvider): Disposable {
-                const pluginId = plugin.model.publisher + '.' + plugin.model.name;
-                const contribution = plugin.rawModel.contributes && plugin.rawModel.contributes.debuggers || [];
-                return debugExt.registerDebugConfigurationProvider(debugType, provider, pluginId, contribution);
+                const contributions = plugin.rawModel.contributes && plugin.rawModel.contributes.debuggers || [];
+                const contribution = contributions.filter(c => c.type === debugType)[0];
+
+                if (contribution) {
+                    return debugExt.registerDebugConfigurationProvider(provider, contribution);
+                } else {
+                    return Disposable.create(() => { });
+                }
             },
             startDebugging(folder: theia.WorkspaceFolder | undefined, nameOrConfiguration: string | theia.DebugConfiguration): Thenable<boolean> {
                 return debugExt.startDebugging(folder, nameOrConfiguration);
@@ -578,7 +583,7 @@ export function createAPIFactory(
             Breakpoint,
             SourceBreakpoint,
             FunctionBreakpoint
-       };
+        };
     };
 }
 
