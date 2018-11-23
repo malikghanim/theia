@@ -76,7 +76,7 @@ export namespace VSCodeDebuggerContribution {
 }
 
 @injectable()
-export class AbstractVSCodeDebugAdapterContribution implements DebugAdapterContribution {
+export abstract class AbstractVSCodeDebugAdapterContribution implements DebugAdapterContribution {
 
     protected readonly pckPath: string;
     protected readonly pck: Promise<VSCodeExtensionPackage>;

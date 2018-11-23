@@ -99,12 +99,16 @@ import { TreeViewsExtImpl } from './tree/tree-views';
 import { ConnectionExtImpl } from './connection-ext';
 import { WebviewsExtImpl } from './webviews';
 import { DebugExtImpl } from './debug/debug';
+import { DebugExtImpl } from './node/debug';
 
 export function createAPIFactory(
     rpc: RPCProtocol,
     pluginManager: PluginManager,
     envExt: EnvExtImpl,
+    debugExt: DebugExtImpl,
     preferenceRegistryExt: PreferenceRegistryExtImpl): PluginAPIFactory {
+
+    rpc.set(MAIN_RPC_CONTEXT.DEBUG_EXT, debugExt);
 
     const commandRegistry = rpc.set(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT, new CommandRegistryImpl(rpc));
     const quickOpenExt = rpc.set(MAIN_RPC_CONTEXT.QUICK_OPEN_EXT, new QuickOpenExtImpl(rpc));
@@ -496,14 +500,7 @@ export function createAPIFactory(
                 return debugExt.onDidChangeBreakpoints;
             },
             registerDebugConfigurationProvider(debugType: string, provider: theia.DebugConfigurationProvider): Disposable {
-                const contributions = plugin.rawModel.contributes && plugin.rawModel.contributes.debuggers || [];
-                const contribution = contributions.filter(c => c.type === debugType)[0];
-
-                if (contribution) {
-                    return debugExt.registerDebugConfigurationProvider(provider, contribution);
-                } else {
-                    return Disposable.create(() => { });
-                }
+                return debugExt.registerDebugConfigurationProvider(debugType, provider, plugin.pluginPath);
             },
             startDebugging(folder: theia.WorkspaceFolder | undefined, nameOrConfiguration: string | theia.DebugConfiguration): Thenable<boolean> {
                 return debugExt.startDebugging(folder, nameOrConfiguration);
