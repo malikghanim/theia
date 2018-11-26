@@ -16,8 +16,7 @@
 
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { injectable, unmanaged } from 'inversify';
-import { DebugAdapterContribution, DebugAdapterExecutable } from '../debug-model';
+import { DebugAdapterExecutable, DebugAdapterContribution } from '../debug-model';
 import { isWindows, isOSX } from '@theia/core/lib/common/os';
 import { IJSONSchema, IJSONSchemaSnippet } from '@theia/core/lib/common/json-schema';
 import { deepClone } from '@theia/core/lib/common/objects';
@@ -75,7 +74,6 @@ export namespace VSCodeDebuggerContribution {
     }
 }
 
-@injectable()
 export abstract class AbstractVSCodeDebugAdapterContribution implements DebugAdapterContribution {
 
     protected readonly pckPath: string;
@@ -86,8 +84,8 @@ export abstract class AbstractVSCodeDebugAdapterContribution implements DebugAda
     readonly languages: Promise<string[] | undefined>;
 
     constructor(
-        @unmanaged() readonly type: string,
-        @unmanaged() readonly extensionPath: string
+        readonly type: string,
+        readonly extensionPath: string
     ) {
         this.pckPath = path.join(this.extensionPath, 'package.json');
         this.pck = this.parse();
