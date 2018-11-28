@@ -74,7 +74,7 @@ export namespace VSCodeDebuggerContribution {
     }
 }
 
-export abstract class AbstractVSCodeDebugAdapterContribution implements DebugAdapterContribution {
+export class VSCodeDebugAdapterContribution implements DebugAdapterContribution {
 
     protected readonly pckPath: string;
     protected readonly pck: Promise<VSCodeExtensionPackage>;
