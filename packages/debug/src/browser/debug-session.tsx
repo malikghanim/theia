@@ -46,8 +46,6 @@ export enum DebugState {
 // FIXME: make injectable to allow easily inject services
 export class DebugSession implements CompositeTreeElement {
 
-    protected readonly connection: DebugSessionConnection;
-
     protected readonly onDidChangeEmitter = new Emitter<void>();
     readonly onDidChange: Event<void> = this.onDidChangeEmitter.event;
     protected fireDidChange(): void {
@@ -65,7 +63,7 @@ export class DebugSession implements CompositeTreeElement {
     constructor(
         readonly id: string,
         readonly options: DebugSessionOptions,
-        connectionProvider: WebSocketConnectionProvider,
+        protected readonly connection: DebugSessionConnection,
         protected readonly terminalServer: TerminalService,
         protected readonly editorManager: EditorManager,
         protected readonly breakpoints: BreakpointManager,
@@ -73,7 +71,6 @@ export class DebugSession implements CompositeTreeElement {
         protected readonly messages: MessageClient,
         protected readonly traceOutputChannel: OutputChannel | undefined,
     ) {
-        this.connection = new DebugSessionConnection(id, connectionProvider, traceOutputChannel);
         this.connection.onRequest('runInTerminal', (request: DebugProtocol.RunInTerminalRequest) => this.runInTerminal(request));
         this.toDispose.pushAll([
             this.onDidChangeEmitter,

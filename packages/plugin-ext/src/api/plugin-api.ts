@@ -45,7 +45,6 @@ import {
     TextEdit,
     DocumentSymbol,
     ReferenceContext,
-    Location,
     FileWatcherSubscriberOptions,
     FileChangeEvent,
     TextDocumentShowOptions,

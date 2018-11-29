@@ -21,6 +21,18 @@ import { Disposable } from '@theia/core/lib/common/disposable';
 import { DebugService, DebuggerDescription } from '../common/debug-service';
 import { IJSONSchema, IJSONSchemaSnippet } from '@theia/core/lib/common/json-schema';
 import { Emitter, Event } from '@theia/core/lib/common/event';
+import { DebugSessionManager } from './debug-session-manager';
+import { DebugSessionFactory } from './debug-session-contribution';
+import { DebugSessionOptions } from './debug-session-options';
+import { DebugSession } from './debug-session';
+import { TerminalService } from '@theia/terminal/lib/browser/base/terminal-service';
+import { EditorManager } from '@theia/editor/lib/browser/editor-manager';
+import { BreakpointManager } from './breakpoint/breakpoint-manager';
+import { LabelProvider } from '@theia/core/lib/browser/label-provider';
+import { MessageClient } from '@theia/core/lib/common/message-service-protocol';
+import { OutputChannelManager, OutputChannel } from '@theia/output/lib/common/output-channel';
+import { DebugPreferences } from './debug-preferences';
+import { DebugSessionConnection } from './debug-session-connection';
 
 /**
  * Manages both extension and plugin debuggers contributions
@@ -33,6 +45,22 @@ export class DebugContributionManager {
     protected readonly workspaceService: WorkspaceService;
     @inject(DebugService)
     protected readonly debugService: DebugService;
+    @inject(DebugSessionManager)
+    protected readonly sessionManager: DebugSessionManager;
+    @inject(TerminalService)
+    protected readonly terminalService: TerminalService;
+    @inject(EditorManager)
+    protected readonly editorManager: EditorManager;
+    @inject(BreakpointManager)
+    protected readonly breakpoints: BreakpointManager;
+    @inject(LabelProvider)
+    protected readonly labelProvider: LabelProvider;
+    @inject(MessageClient)
+    protected readonly messages: MessageClient;
+    @inject(OutputChannelManager)
+    protected readonly outputChannelManager: OutputChannelManager;
+    @inject(DebugPreferences)
+    protected readonly debugPreferences: DebugPreferences;
 
     protected readonly onDidContributionAddEmitter = new Emitter<string>();
     readonly onDidContributionAdd: Event<string> = this.onDidContributionAddEmitter.event;
@@ -53,6 +81,19 @@ export class DebugContributionManager {
             return Disposable.NULL;
         }
 
+        this.sessionManager.registerDebugSessionContribution(type, {
+            debugType: type,
+            debugSessionFactory: () =>
+                new PluginDebugSessionFactory(
+                    this.terminalService,
+                    this.editorManager,
+                    this.breakpoints,
+                    this.labelProvider,
+                    this.messages,
+                    this.outputChannelManager,
+                    this.debugPreferences)
+        });
+
         this.pluginContributors.set(type, contributor);
         this.fireDidContributionAdd(type);
         return Disposable.create(() => this.unregisterDebugPluginContributor(type));
@@ -60,6 +101,7 @@ export class DebugContributionManager {
 
     async unregisterDebugPluginContributor(debugType: string): Promise<void> {
         this.pluginContributors.delete(debugType);
+        this.sessionManager.unregisterDebugSessionContribution(debugType);
         this.fireDidContributionDelete(debugType);
     }
 
@@ -143,6 +185,50 @@ export class DebugContributionManager {
     private async isContributorRegistered(debugType: string): Promise<boolean> {
         const registeredTypes = await this.debugTypes();
         return registeredTypes.indexOf(debugType) !== -1;
+    }
+}
+
+class PluginDebugSessionFactory implements DebugSessionFactory {
+    constructor(
+        protected readonly terminalService: TerminalService,
+        protected readonly editorManager: EditorManager,
+        protected readonly breakpoints: BreakpointManager,
+        protected readonly labelProvider: LabelProvider,
+        protected readonly messages: MessageClient,
+        protected readonly outputChannelManager: OutputChannelManager,
+        protected readonly debugPreferences: DebugPreferences
+    ) { }
+
+    get(sessionId: string, options: DebugSessionOptions): DebugSession {
+        let traceOutputChannel: OutputChannel | undefined;
+
+        if (this.debugPreferences['debug.trace']) {
+            traceOutputChannel = this.outputChannelManager.getChannel('Debug adapters');
+        }
+
+        const connection = new DebugSessionConnection(sessionId, this.connectionProvider, traceOutputChannel);
+
+        return new DebugSession(
+            sessionId,
+            options,
+            connection,
+            this.terminalService,
+            this.editorManager,
+            this.breakpoints,
+            this.labelProvider,
+            this.messages,
+            traceOutputChannel,
+        );
+    }
+}
+
+class PluginDebugSessionConnection extends DebugSessionConnection {
+    constructor(
+        readonly sessionId: string,
+        protected readonly connectionProvider: WebSocketConnectionProvider,
+        protected readonly traceOutputChannel: OutputChannel | undefined
+    ) {
+        super();
     }
 }
 

@@ -25,6 +25,7 @@ import { BreakpointManager } from './breakpoint/breakpoint-manager';
 import { DebugSessionOptions } from './debug-session-options';
 import { OutputChannelManager, OutputChannel } from '@theia/output/lib/common/output-channel';
 import { DebugPreferences } from './debug-preferences';
+import { DebugSessionConnection } from './debug-session-connection';
 
 /**
  * DebugSessionContribution symbol for DI.
@@ -93,10 +94,12 @@ export class DefaultDebugSessionFactory implements DebugSessionFactory {
             traceOutputChannel = this.outputChannelManager.getChannel('Debug adapters');
         }
 
+        const connection = new DebugSessionConnection(sessionId, this.connectionProvider, traceOutputChannel);
+
         return new DebugSession(
             sessionId,
             options,
-            this.connectionProvider,
+            connection,
             this.terminalService,
             this.editorManager,
             this.breakpoints,

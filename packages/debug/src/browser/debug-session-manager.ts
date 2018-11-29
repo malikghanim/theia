@@ -31,6 +31,7 @@ import URI from '@theia/core/lib/common/uri';
 import { VariableResolverService } from '@theia/variable-resolver/lib/browser';
 import { DebugSessionOptions, InternalDebugSessionOptions } from './debug-session-options';
 import { DebugContributionManager } from './debug-contribution-manager';
+import { Disposable } from '@theia/core/lib/common/disposable';
 
 export interface DidChangeActiveDebugSession {
     previous: DebugSession | undefined
@@ -177,6 +178,20 @@ export class DebugSessionManager {
             this.onDidReceiveDebugSessionCustomEventEmitter.fire({ event, body, session })
         );
         return session;
+    }
+
+    registerDebugSessionContribution(debugType: string, contrib: DebugSessionContribution): Disposable {
+        if (this.contribs.has(debugType)) {
+            console.warn(`Debug session contribution already registered for ${debugType}`);
+            return Disposable.NULL;
+        }
+
+        this.contribs.set(debugType, contrib);
+        return Disposable.create(() => this.unregisterDebugSessionContribution(debugType));
+    }
+
+    unregisterDebugSessionContribution(debugType: string): void {
+        this.contribs.delete(debugType);
     }
 
     restart(): Promise<DebugSession | undefined>;
