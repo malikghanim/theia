@@ -26,7 +26,9 @@ import { injectable, inject } from 'inversify';
 import {
     RawProcessFactory,
     ProcessManager,
-    RawProcess
+    RawProcess,
+    RawForkOptions,
+    RawProcessOptions
 } from '@theia/process/lib/node';
 import {
     DebugAdapterExecutable,
@@ -49,7 +51,8 @@ export class LaunchBasedDebugAdapterFactory implements DebugAdapterFactory {
     protected readonly processManager: ProcessManager;
 
     start(executable: DebugAdapterExecutable): CommunicationProvider {
-        const process = this.spawnProcess(executable);
+        const process = this.childProcess(executable);
+
         // FIXME: propagate onError + onExit
         return {
             input: process.input,
@@ -58,9 +61,19 @@ export class LaunchBasedDebugAdapterFactory implements DebugAdapterFactory {
         };
     }
 
-    private spawnProcess(executable: DebugAdapterExecutable): RawProcess {
-        const { command, args } = executable;
-        return this.processFactory({ command, args, options: { stdio: ['pipe', 'pipe', 2] } });
+    private childProcess(executable: DebugAdapterExecutable): RawProcess {
+        const isForkOptions = (forkOptions: RawForkOptions | any): forkOptions is RawForkOptions =>
+            !!forkOptions && !!forkOptions.modulePath;
+
+        const processOptions: RawProcessOptions | RawForkOptions = { ...executable };
+        const options = { stdio: ['pipe', 'pipe', 2] };
+
+        if (isForkOptions(processOptions)) {
+            options.stdio.push('ipc');
+        }
+
+        processOptions.options = options;
+        return this.processFactory(processOptions);
     }
 
     connect(debugServerPort: number): CommunicationProvider {

@@ -33,9 +33,12 @@ import { SourceBreakpoint } from '@theia/debug/lib/browser/breakpoint/breakpoint
 import { DebugPluginContributor, DebugContributionManager } from '@theia/debug/lib/browser/debug-contribution-manager';
 import { DebugConfiguration } from '@theia/debug/lib/common/debug-configuration';
 import { CommandRegistry } from '@theia/core/lib/common/command';
+import { PluginWebSocketChannel } from '../../common/connection';
+import { ConnectionMainImpl } from './connection-main';
+import { Deferred } from '@theia/core/lib/common/promise-util';
 
 export class DebugMainImpl implements DebugMain {
-    private readonly proxy: DebugExt;
+    private readonly debugExt: DebugExt;
 
     private readonly sessionManager: DebugSessionManager;
     private readonly labelProvider: LabelProvider;
@@ -48,8 +51,8 @@ export class DebugMainImpl implements DebugMain {
     // registered plugins per contributorId
     private readonly proxyContributors = new Map<string, DebugPluginContributor>();
 
-    constructor(rpc: RPCProtocol, container: interfaces.Container) {
-        this.proxy = rpc.getProxy(MAIN_RPC_CONTEXT.DEBUG_EXT);
+    constructor(rpc: RPCProtocol, readonly connectionMain: ConnectionMainImpl, container: interfaces.Container) {
+        this.debugExt = rpc.getProxy(MAIN_RPC_CONTEXT.DEBUG_EXT);
         this.contributionManager = container.get(DebugContributionManager);
         this.sessionManager = container.get(DebugSessionManager);
         this.labelProvider = container.get(LabelProvider);
@@ -62,12 +65,12 @@ export class DebugMainImpl implements DebugMain {
         this.breakpointsManager.onDidChangeMarkers(uri => {
             const all = this.breakpointsManager.getBreakpoints();
             const affected = this.breakpointsManager.getBreakpoints(uri);
-            this.proxy.$breakpointsDidChange(this.toTheiaPluginApiBreakpoints(all), [], [], this.toTheiaPluginApiBreakpoints(affected));
+            this.debugExt.$breakpointsDidChange(this.toTheiaPluginApiBreakpoints(all), [], [], this.toTheiaPluginApiBreakpoints(affected));
         });
 
-        this.sessionManager.onDidCreateDebugSession(debugSession => this.proxy.$sessionDidCreate(debugSession.id));
-        this.sessionManager.onDidDestroyDebugSession(debugSession => this.proxy.$sessionDidDestroy(debugSession.id));
-        this.sessionManager.onDidChangeActiveDebugSession(event => this.proxy.$sessionDidChange(event.current && event.current.id));
+        this.sessionManager.onDidCreateDebugSession(debugSession => this.debugExt.$sessionDidCreate(debugSession.id));
+        this.sessionManager.onDidDestroyDebugSession(debugSession => this.debugExt.$sessionDidDestroy(debugSession.id));
+        this.sessionManager.onDidChangeActiveDebugSession(event => this.debugExt.$sessionDidChange(event.current && event.current.id));
     }
 
     async $appendToDebugConsole(value: string): Promise<void> {
@@ -79,26 +82,36 @@ export class DebugMainImpl implements DebugMain {
     }
 
     async $registerDebugConfigurationProvider(contributorId: string, debugType: string): Promise<void> {
-        const description = await this.proxy.$getDebuggerDescription(contributorId);
+        const description = await this.debugExt.$getDebuggerDescription(contributorId);
+        const sessionIdDeferred = new Deferred<string>();
 
         const proxyContributor: DebugPluginContributor = {
             description,
 
             provideDebugConfigurations: (workspaceFolderUri: string | undefined) =>
-                this.proxy.$provideDebugConfigurations(contributorId, workspaceFolderUri),
+                this.debugExt.$provideDebugConfigurations(contributorId, workspaceFolderUri),
             resolveDebugConfiguration: (config: DebugConfiguration, workspaceFolderUri: string | undefined) =>
-                this.proxy.$resolveDebugConfigurations(contributorId, config, workspaceFolderUri),
+                this.debugExt.$resolveDebugConfigurations(contributorId, config, workspaceFolderUri),
 
-            getSupportedLanguages: () => this.proxy.$getSupportedLanguages(contributorId),
-            getSchemaAttributes: () => this.proxy.$getSchemaAttributes(contributorId),
-            getConfigurationSnippets: () => this.proxy.$getConfigurationSnippets(contributorId),
+            getSupportedLanguages: () => this.debugExt.$getSupportedLanguages(contributorId),
+            getSchemaAttributes: () => this.debugExt.$getSchemaAttributes(contributorId),
+            getConfigurationSnippets: () => this.debugExt.$getConfigurationSnippets(contributorId),
 
-            createDebugSession: (debugConfiguration: DebugConfiguration) => this.proxy.$createDebugSession(contributorId, debugConfiguration),
-            terminateDebugSession: (sessionId: string) => this.proxy.$terminateDebugSession(sessionId)
+            createDebugSession: async (debugConfiguration: DebugConfiguration) => {
+                const sessionId = await this.debugExt.$createDebugSession(contributorId, debugConfiguration);
+                sessionIdDeferred.resolve(sessionId);
+                return sessionId;
+            },
+            terminateDebugSession: (sessionId: string) => this.debugExt.$terminateDebugSession(sessionId),
+
+            getConnectionFactory: async () => {
+                const connection = await this.connectionMain.ensureConnection(await sessionIdDeferred.promise);
+                return new PluginWebSocketChannel(connection);
+            }
         };
 
         this.proxyContributors.set(contributorId, proxyContributor);
-        this.contributionManager.registerDebugPluginContributor(proxyContributor);
+        this.contributionManager.registerDebugPluginContributor(debugType, proxyContributor);
     }
 
     async $unregisterDebugConfigurationProvider(contributorId: string): Promise<void> {

@@ -24,7 +24,11 @@ import {
 } from '../../api/plugin-api';
 import * as theia from '@theia/plugin';
 import uuid = require('uuid');
-import { DebugAdapterContribution, DebugAdapterExecutable, CommunicationProvider } from '@theia/debug/lib/node/debug-model';
+import {
+    DebugAdapterContribution,
+    DebugAdapterExecutable,
+    CommunicationProvider
+} from '@theia/debug/lib/node/debug-model';
 import { IJSONSchema, IJSONSchemaSnippet } from '@theia/core/lib/common/json-schema';
 import { DebuggerDescription } from '@theia/debug/lib/common/debug-service';
 import { DebugConfiguration } from '@theia/debug/lib/common/debug-configuration';
@@ -34,7 +38,10 @@ import { PluginPackageDebuggersContribution } from '../../common';
 import { DebugAdapterSessionImpl } from '@theia/debug/lib/node/debug-adapter-session';
 import { DisposableCollection } from '@theia/core/lib/common/disposable';
 import { IWebSocket } from 'vscode-ws-jsonrpc';
-import { ChildProcess, spawn } from 'child_process';
+import { ChildProcess, spawn, fork } from 'child_process';
+import { ConnectionExtImpl } from '../connection-ext';
+import { PluginWebSocketChannel } from '../../common/connection';
+
 /**
  * It is supposed to work at node.
  */
@@ -56,7 +63,7 @@ export class DebugExtImpl implements DebugExt {
     private readonly onDidStartDebugSessionEmitter = new Emitter<theia.DebugSession>();
     private readonly onDidReceiveDebugSessionCustomEmitter = new Emitter<theia.DebugSessionCustomEvent>();
 
-    constructor(rpc: RPCProtocol) {
+    constructor(rpc: RPCProtocol, readonly connectionExt?: ConnectionExtImpl) {
         this.proxy = rpc.getProxy(Ext.DEBUG_MAIN);
     }
 
@@ -181,6 +188,9 @@ export class DebugExtImpl implements DebugExt {
             const sessionId = uuid.v4();
             const session = new PluginDebugSession(sessionId, debugConfiguration, communicationProvider);
             this.debugSessions.set(sessionId, session);
+
+            const connection = await this.connectionExt!.ensureConnection(sessionId);
+            session.start(new PluginWebSocketChannel(connection));
 
             const disposable = session.onDidReceiveDebugSessionCustomEvent(event => this.onDidReceiveDebugSessionCustomEmitter.fire(event));
             this.disposables.set(sessionId, new DisposableCollection(disposable));
@@ -342,8 +352,16 @@ class PluginDebugSession extends DebugAdapterSessionImpl implements theia.DebugS
 }
 
 function startDebugAdapter(executable: DebugAdapterExecutable): CommunicationProvider {
-    const { command, args } = executable;
-    const childProcess = spawn(command, args, { stdio: ['pipe', 'pipe', 2] }) as ChildProcess;
+    let childProcess: ChildProcess;
+    if ('command' in executable) {
+        const { command, args } = executable;
+        childProcess = spawn(command, args, { stdio: ['pipe', 'pipe', 2] }) as ChildProcess;
+    } else if ('modulePath' in executable) {
+        const { modulePath, args } = executable;
+        childProcess = fork(modulePath, args, { stdio: ['pipe', 'pipe', 2, 'ipc'] });
+    } else {
+        throw new Error(`It is not possible to launch debug adapter with the command: ${JSON.stringify(executable)}`);
+    }
 
     return {
         input: childProcess.stdin,

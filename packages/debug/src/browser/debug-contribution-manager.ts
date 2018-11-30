@@ -33,6 +33,7 @@ import { MessageClient } from '@theia/core/lib/common/message-service-protocol';
 import { OutputChannelManager, OutputChannel } from '@theia/output/lib/common/output-channel';
 import { DebugPreferences } from './debug-preferences';
 import { DebugSessionConnection } from './debug-session-connection';
+import { IWebSocket } from 'vscode-ws-jsonrpc/lib/socket/socket';
 
 /**
  * Manages both extension and plugin debuggers contributions
@@ -74,8 +75,7 @@ export class DebugContributionManager {
         this.onDidContributionDeleteEmitter.fire(debugType);
     }
 
-    async registerDebugPluginContributor(contributor: DebugPluginContributor): Promise<Disposable> {
-        const type = contributor.description.type;
+    async registerDebugPluginContributor(type: string, contributor: DebugPluginContributor): Promise<Disposable> {
         if (await this.isContributorRegistered(type)) {
             console.warn(`Debugger with type '${type}' already registered.`);
             return Disposable.NULL;
@@ -91,7 +91,8 @@ export class DebugContributionManager {
                     this.labelProvider,
                     this.messages,
                     this.outputChannelManager,
-                    this.debugPreferences)
+                    this.debugPreferences,
+                    contributor)
         });
 
         this.pluginContributors.set(type, contributor);
@@ -196,7 +197,8 @@ class PluginDebugSessionFactory implements DebugSessionFactory {
         protected readonly labelProvider: LabelProvider,
         protected readonly messages: MessageClient,
         protected readonly outputChannelManager: OutputChannelManager,
-        protected readonly debugPreferences: DebugPreferences
+        protected readonly debugPreferences: DebugPreferences,
+        protected readonly contributor: DebugPluginContributor
     ) { }
 
     get(sessionId: string, options: DebugSessionOptions): DebugSession {
@@ -206,7 +208,10 @@ class PluginDebugSessionFactory implements DebugSessionFactory {
             traceOutputChannel = this.outputChannelManager.getChannel('Debug adapters');
         }
 
-        const connection = new DebugSessionConnection(sessionId, this.connectionProvider, traceOutputChannel);
+        const connection = new DebugSessionConnection(
+            sessionId,
+            this.contributor.getConnectionFactory,
+            traceOutputChannel);
 
         return new DebugSession(
             sessionId,
@@ -222,16 +227,6 @@ class PluginDebugSessionFactory implements DebugSessionFactory {
     }
 }
 
-class PluginDebugSessionConnection extends DebugSessionConnection {
-    constructor(
-        readonly sessionId: string,
-        protected readonly connectionProvider: WebSocketConnectionProvider,
-        protected readonly traceOutputChannel: OutputChannel | undefined
-    ) {
-        super();
-    }
-}
-
 export interface DebugPluginContributor {
     description: DebuggerDescription;
     getSupportedLanguages(): Promise<string[]>;
@@ -241,4 +236,5 @@ export interface DebugPluginContributor {
     resolveDebugConfiguration(config: DebugConfiguration, workspaceFolderUri: string | undefined): Promise<DebugConfiguration | undefined>;
     createDebugSession(config: DebugConfiguration): Promise<string>;
     terminateDebugSession(sessionId: string): Promise<void>;
+    getConnectionFactory(): Promise<IWebSocket>;
 }

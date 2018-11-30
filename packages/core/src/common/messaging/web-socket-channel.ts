@@ -33,6 +33,9 @@ export class WebSocketChannel implements IWebSocket {
     ) { }
 
     dispose(): void {
+        if (!this.closed) {
+            this.close();
+        }
         this.toDispose.dispose();
     }
 
@@ -78,6 +81,7 @@ export class WebSocketChannel implements IWebSocket {
         }));
     }
 
+    protected closed = false;
     close(code: number = 1000, reason: string = ''): void {
         this.checkNotDisposed();
         this.doSend(JSON.stringify(<WebSocketChannel.CloseMessage>{
@@ -86,6 +90,7 @@ export class WebSocketChannel implements IWebSocket {
             code,
             reason
         }));
+        this.closed = true;
         this.fireClose(code, reason);
     }
 

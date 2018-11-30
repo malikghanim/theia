@@ -16,11 +16,9 @@
 
 // tslint:disable:no-any
 
-import { WebSocketConnectionProvider } from '@theia/core/lib/browser';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { Deferred } from '@theia/core/lib/common/promise-util';
 import { Event, Emitter, DisposableCollection, Disposable } from '@theia/core';
-import { DebugAdapterPath } from '../common/debug-service';
 import { OutputChannel } from '@theia/output/lib/common/output-channel';
 import { IWebSocket } from 'vscode-ws-jsonrpc/lib/socket/socket';
 
@@ -117,7 +115,7 @@ export class DebugSessionConnection implements Disposable {
 
     constructor(
         readonly sessionId: string,
-        protected readonly connectionProvider: WebSocketConnectionProvider,
+        protected readonly connectionFactory: () => Promise<IWebSocket>,
         protected readonly traceOutputChannel: OutputChannel | undefined
     ) {
         this.connection = this.createConnection();
@@ -136,22 +134,18 @@ export class DebugSessionConnection implements Disposable {
         this.toDispose.dispose();
     }
 
-    protected createConnection(): Promise<IWebSocket> {
-        return new Promise<IWebSocket>(resolve =>
-            this.connectionProvider.openChannel(`${DebugAdapterPath}/${this.sessionId}`, channel => {
-                if (this.disposed) {
-                    channel.close();
-                } else {
-                    const closeChannel = this.toDispose.push(Disposable.create(() => channel.close()));
-                    channel.onClose((code, reason) => {
-                        closeChannel.dispose();
-                        this.fire('exited', { code, reason });
-                    });
-                    channel.onMessage(data => this.handleMessage(data));
-                    resolve(channel);
-                }
-            }, { reconnecting: false })
-        );
+    protected async createConnection(): Promise<IWebSocket> {
+        if (this.disposed) {
+            throw new Error('Connection has been already disposed.');
+        } else {
+            const connection = await this.connectionFactory();
+            connection.onClose((code, reason) => {
+                connection.dispose();
+                this.fire('exited', { code, reason });
+            });
+            connection.onMessage(data => this.handleMessage(data));
+            return connection;
+        }
     }
 
     protected allThreadsContinued = true;

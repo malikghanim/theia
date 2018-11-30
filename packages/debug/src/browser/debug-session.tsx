@@ -17,7 +17,7 @@
 // tslint:disable:no-any
 
 import * as React from 'react';
-import { WebSocketConnectionProvider, LabelProvider } from '@theia/core/lib/browser';
+import { LabelProvider } from '@theia/core/lib/browser';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { Emitter, Event, DisposableCollection, Disposable, MessageClient, MessageType, Mutable } from '@theia/core/lib/common';
 import { TerminalService } from '@theia/terminal/lib/browser/base/terminal-service';

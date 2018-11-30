@@ -21,73 +21,13 @@
 
 // Some entities copied and modified from https://github.com/Microsoft/vscode-debugadapter-node/blob/master/adapter/src/protocol.ts
 
-import * as net from 'net';
-import { injectable, inject } from 'inversify';
 import { Disposable, DisposableCollection } from '@theia/core';
 import {
-    RawProcessFactory,
-    ProcessManager,
-    RawProcess,
-    RawProcessOptions,
-    RawForkOptions
-} from '@theia/process/lib/node';
-import {
-    DebugAdapterExecutable,
     CommunicationProvider,
     DebugAdapterSession,
-    DebugAdapterFactory
 } from './debug-model';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { IWebSocket } from 'vscode-ws-jsonrpc/lib/socket/socket';
-
-/**
- * [DebugAdapterFactory](#DebugAdapterFactory) implementation based on
- * launching the debug adapter as separate process.
- */
-@injectable()
-export class LaunchBasedDebugAdapterFactory implements DebugAdapterFactory {
-    @inject(RawProcessFactory)
-    protected readonly processFactory: RawProcessFactory;
-    @inject(ProcessManager)
-    protected readonly processManager: ProcessManager;
-
-    start(executable: DebugAdapterExecutable): CommunicationProvider {
-        const process = this.childProcess(executable);
-
-        // FIXME: propagate onError + onExit
-        return {
-            input: process.input,
-            output: process.output,
-            dispose: () => process.kill()
-        };
-    }
-
-    private childProcess(executable: DebugAdapterExecutable): RawProcess {
-        // tslint:disable-next-line:no-any
-        const isForkOptions = (forkOptions: any): forkOptions is RawForkOptions =>
-            !!forkOptions && !!forkOptions.modulePath;
-
-        const processOptions: RawProcessOptions | RawForkOptions = { ...executable };
-        const options = { stdio: ['pipe', 'pipe', 2] };
-
-        if (isForkOptions(processOptions)) {
-            options.stdio.push('ipc');
-        }
-
-        processOptions.options = options;
-        return this.processFactory(processOptions);
-    }
-
-    connect(debugServerPort: number): CommunicationProvider {
-        const socket = net.createConnection(debugServerPort);
-        // FIXME: propagate socket.on('error', ...) + socket.on('close', ...)
-        return {
-            input: socket,
-            output: socket,
-            dispose: () => socket.end()
-        };
-    }
-}
 
 /**
  * [DebugAdapterSession](#DebugAdapterSession) implementation.
