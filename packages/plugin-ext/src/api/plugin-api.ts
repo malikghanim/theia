@@ -880,7 +880,6 @@ export interface DebugExt {
     $getSupportedLanguages(contributionId: string): Promise<string[]>;
     $getSchemaAttributes(contributionId: string): Promise<IJSONSchema[]>;
     $getConfigurationSnippets(contributionId: string): Promise<IJSONSchemaSnippet[]>;
-    $getDebuggerDescription(contributionId: string): Promise<DebuggerDescription>;
     $createDebugSession(contributionId: string, debugConfiguration: theia.DebugConfiguration): Promise<string>;
     $terminateDebugSession(sessionId: string): Promise<void>;
 }
@@ -888,7 +887,7 @@ export interface DebugExt {
 export interface DebugMain {
     $appendToDebugConsole(value: string): Promise<void>;
     $appendLineToDebugConsole(value: string): Promise<void>;
-    $registerDebugConfigurationProvider(contributorId: string, debugType: string): Promise<void>;
+    $registerDebugConfigurationProvider(contributorId: string, description: DebuggerDescription): Promise<void>;
     $unregisterDebugConfigurationProvider(contributorId: string): Promise<void>;
     $addBreakpoints(breakpoints: Breakpoint[]): Promise<void>;
     $removeBreakpoints(breakpoints: Breakpoint[]): Promise<void>;

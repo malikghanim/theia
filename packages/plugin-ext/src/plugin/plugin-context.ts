@@ -106,10 +106,9 @@ export function createAPIFactory(
     rpc: RPCProtocol,
     pluginManager: PluginManager,
     envExt: EnvExtImpl,
+    connectionExt: ConnectionExtImpl,
     debugExt: DebugExtImpl,
     preferenceRegistryExt: PreferenceRegistryExtImpl): PluginAPIFactory {
-
-    rpc.set(MAIN_RPC_CONTEXT.DEBUG_EXT, debugExt);
 
     const commandRegistry = rpc.set(MAIN_RPC_CONTEXT.COMMAND_REGISTRY_EXT, new CommandRegistryImpl(rpc));
     const quickOpenExt = rpc.set(MAIN_RPC_CONTEXT.QUICK_OPEN_EXT, new QuickOpenExtImpl(rpc));
@@ -129,6 +128,8 @@ export function createAPIFactory(
     const treeViewsExt = rpc.set(MAIN_RPC_CONTEXT.TREE_VIEWS_EXT, new TreeViewsExtImpl(rpc, commandRegistry));
     const webviewExt = rpc.set(MAIN_RPC_CONTEXT.WEBVIEWS_EXT, new WebviewsExtImpl(rpc));
     const connectionExt = rpc.set(MAIN_RPC_CONTEXT.CONNECTION_EXT, new ConnectionExtImpl(rpc));
+
+    rpc.set(MAIN_RPC_CONTEXT.DEBUG_EXT, debugExt);
 
     return function (plugin: InternalPlugin): typeof theia {
         const commands: typeof theia.commands = {

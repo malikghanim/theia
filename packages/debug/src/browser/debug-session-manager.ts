@@ -16,13 +16,13 @@
 
 // tslint:disable:no-any
 
-import { injectable, inject, named, postConstruct } from 'inversify';
-import { Emitter, Event, ContributionProvider, DisposableCollection, MessageService } from '@theia/core';
+import { injectable, inject, postConstruct } from 'inversify';
+import { Emitter, Event, DisposableCollection, MessageService } from '@theia/core';
 import { LabelProvider } from '@theia/core/lib/browser';
 import { EditorManager } from '@theia/editor/lib/browser';
 import { DebugError } from '../common/debug-service';
 import { DebugState, DebugSession } from './debug-session';
-import { DebugSessionContribution, DebugSessionFactory } from './debug-session-contribution';
+import { DebugSessionFactory } from './debug-session-contribution';
 import { DebugThread } from './model/debug-thread';
 import { DebugStackFrame } from './model/debug-stack-frame';
 import { DebugBreakpoint } from './model/debug-breakpoint';
@@ -31,7 +31,7 @@ import URI from '@theia/core/lib/common/uri';
 import { VariableResolverService } from '@theia/variable-resolver/lib/browser';
 import { DebugSessionOptions, InternalDebugSessionOptions } from './debug-session-options';
 import { DebugContributionManager } from './debug-contribution-manager';
-import { Disposable } from '@theia/core/lib/common/disposable';
+import { DebugSessionContributionRegistry } from './debug-session-contribution-registory';
 
 export interface DidChangeActiveDebugSession {
     previous: DebugSession | undefined
@@ -52,7 +52,6 @@ export interface DebugSessionCustomEvent {
 @injectable()
 export class DebugSessionManager {
     protected readonly _sessions = new Map<string, DebugSession>();
-    protected readonly contribs = new Map<string, DebugSessionContribution>();
 
     protected readonly onDidCreateDebugSessionEmitter = new Emitter<DebugSession>();
     readonly onDidCreateDebugSession: Event<DebugSession> = this.onDidCreateDebugSessionEmitter.event;
@@ -87,9 +86,6 @@ export class DebugSessionManager {
     @inject(DebugSessionFactory)
     protected readonly debugSessionFactory: DebugSessionFactory;
 
-    @inject(ContributionProvider) @named(DebugSessionContribution)
-    protected readonly contributions: ContributionProvider<DebugSessionContribution>;
-
     @inject(DebugContributionManager)
     protected readonly debugManager: DebugContributionManager;
 
@@ -108,11 +104,11 @@ export class DebugSessionManager {
     @inject(MessageService)
     protected readonly messageService: MessageService;
 
+    @inject(DebugSessionContributionRegistry)
+    protected readonly sessionContributionRegistry: DebugSessionContributionRegistry;
+
     @postConstruct()
     protected init(): void {
-        for (const contrib of this.contributions.getContributions()) {
-            this.contribs.set(contrib.debugType, contrib);
-        }
         this.breakpoints.onDidChangeMarkers(uri => this.fireDidChangeBreakpoints({ uri }));
     }
 
@@ -146,7 +142,7 @@ export class DebugSessionManager {
         };
     }
     protected async doStart(sessionId: string, options: DebugSessionOptions): Promise<DebugSession> {
-        const contrib = this.contribs.get(options.configuration.type);
+        const contrib = this.sessionContributionRegistry.get(options.configuration.type);
         const sessionFactory = contrib ? contrib.debugSessionFactory() : this.debugSessionFactory;
         const session = sessionFactory.get(sessionId, options);
         this._sessions.set(sessionId, session);
@@ -178,20 +174,6 @@ export class DebugSessionManager {
             this.onDidReceiveDebugSessionCustomEventEmitter.fire({ event, body, session })
         );
         return session;
-    }
-
-    registerDebugSessionContribution(debugType: string, contrib: DebugSessionContribution): Disposable {
-        if (this.contribs.has(debugType)) {
-            console.warn(`Debug session contribution already registered for ${debugType}`);
-            return Disposable.NULL;
-        }
-
-        this.contribs.set(debugType, contrib);
-        return Disposable.create(() => this.unregisterDebugSessionContribution(debugType));
-    }
-
-    unregisterDebugSessionContribution(debugType: string): void {
-        this.contribs.delete(debugType);
     }
 
     restart(): Promise<DebugSession | undefined>;

@@ -21,13 +21,13 @@
 
 // Some entities copied and modified from https://github.com/Microsoft/vscode-debugadapter-node/blob/master/adapter/src/protocol.ts
 
-import { Disposable, DisposableCollection } from '@theia/core';
 import {
     CommunicationProvider,
     DebugAdapterSession,
 } from './debug-model';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { IWebSocket } from 'vscode-ws-jsonrpc/lib/socket/socket';
+import { DisposableCollection, Disposable } from '@theia/core/lib/common/disposable';
 
 /**
  * [DebugAdapterSession](#DebugAdapterSession) implementation.

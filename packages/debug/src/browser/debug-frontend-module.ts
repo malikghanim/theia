@@ -36,6 +36,7 @@ import { DebugEditorModelFactory, DebugEditorModel } from './editor/debug-editor
 import { DebugContributionManager } from './debug-contribution-manager';
 import './debug-monaco-contribution';
 import { bindDebugPreferences } from './debug-preferences';
+import { DebugSessionContributionRegistry } from './debug-session-contribution-registory';
 
 export default new ContainerModule((bind: interfaces.Bind) => {
     bindContributionProvider(bind, DebugSessionContribution);
@@ -67,6 +68,7 @@ export default new ContainerModule((bind: interfaces.Bind) => {
     bind(KeybindingContext).to(InDebugModeContext).inSingletonScope();
     bindViewContribution(bind, DebugFrontendApplicationContribution);
     bind(FrontendApplicationContribution).toService(DebugFrontendApplicationContribution);
+    bind(DebugSessionContributionRegistry).toSelf().inSingletonScope();
 
     bindDebugPreferences(bind);
 });

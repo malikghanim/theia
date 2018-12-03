@@ -21,7 +21,6 @@ import { Disposable } from '@theia/core/lib/common/disposable';
 import { DebugService, DebuggerDescription } from '../common/debug-service';
 import { IJSONSchema, IJSONSchemaSnippet } from '@theia/core/lib/common/json-schema';
 import { Emitter, Event } from '@theia/core/lib/common/event';
-import { DebugSessionManager } from './debug-session-manager';
 import { DebugSessionFactory } from './debug-session-contribution';
 import { DebugSessionOptions } from './debug-session-options';
 import { DebugSession } from './debug-session';
@@ -34,6 +33,7 @@ import { OutputChannelManager, OutputChannel } from '@theia/output/lib/common/ou
 import { DebugPreferences } from './debug-preferences';
 import { DebugSessionConnection } from './debug-session-connection';
 import { IWebSocket } from 'vscode-ws-jsonrpc/lib/socket/socket';
+import { DebugSessionContributionRegistry } from './debug-session-contribution-registory';
 
 /**
  * Manages both extension and plugin debuggers contributions
@@ -46,8 +46,8 @@ export class DebugContributionManager {
     protected readonly workspaceService: WorkspaceService;
     @inject(DebugService)
     protected readonly debugService: DebugService;
-    @inject(DebugSessionManager)
-    protected readonly sessionManager: DebugSessionManager;
+    @inject(DebugSessionContributionRegistry)
+    protected readonly sessionContributionRegistry: DebugSessionContributionRegistry;
     @inject(TerminalService)
     protected readonly terminalService: TerminalService;
     @inject(EditorManager)
@@ -81,7 +81,7 @@ export class DebugContributionManager {
             return Disposable.NULL;
         }
 
-        this.sessionManager.registerDebugSessionContribution(type, {
+        this.sessionContributionRegistry.registerDebugSessionContribution(type, {
             debugType: type,
             debugSessionFactory: () =>
                 new PluginDebugSessionFactory(
@@ -102,7 +102,7 @@ export class DebugContributionManager {
 
     async unregisterDebugPluginContributor(debugType: string): Promise<void> {
         this.pluginContributors.delete(debugType);
-        this.sessionManager.unregisterDebugSessionContribution(debugType);
+        this.sessionContributionRegistry.unregisterDebugSessionContribution(debugType);
         this.fireDidContributionDelete(debugType);
     }
 

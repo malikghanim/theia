@@ -19,14 +19,15 @@ import * as theia from '@theia/plugin';
 import { DebugExtImpl } from '../../../plugin/node/debug';
 import { Disposable } from '../../../plugin/types-impl';
 import { PluginPackageDebuggersContribution } from '../../../common';
+import { ConnectionExtImpl } from '../../../plugin/connection-ext';
 
 /**
  * Debug API requires access to node to start Debug Adapter.
  * This stub for [DebugExtImpl](#DebugExtImpl) prevents using Debug API in Web Worker.
  */
 export class DebugExtStub extends DebugExtImpl {
-    constructor(rpc: RPCProtocol) {
-        super(rpc);
+    constructor(rpc: RPCProtocol, connectionExt: ConnectionExtImpl) {
+        super(rpc, connectionExt);
     }
 
     get onDidReceiveDebugSessionCustomEvent(): theia.Event<theia.DebugSessionCustomEvent> {

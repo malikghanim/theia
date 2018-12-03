@@ -25,6 +25,7 @@ import { EnvExtImpl } from '../../../plugin/env';
 import { PreferenceRegistryExtImpl } from '../../../plugin/preference-registry';
 import { ExtPluginApi } from '../../../common/plugin-ext-api-contribution';
 import { DebugExtStub } from './debug-stub';
+import { ConnectionExtImpl } from '../../../plugin/connection-ext';
 
 // tslint:disable-next-line:no-any
 const ctx = self as any;
@@ -47,6 +48,7 @@ function initialize(contextPath: string, pluginMetadata: PluginMetadata): void {
     ctx.importScripts('/context/' + contextPath);
 }
 const envExt = new EnvExtImpl(rpc);
+const connectionExt = new ConnectionExtImpl(rpc);
 const preferenceRegistryExt = new PreferenceRegistryExtImpl(rpc);
 
 const pluginManager = new PluginManagerExtImpl({
@@ -118,7 +120,14 @@ const pluginManager = new PluginManagerExtImpl({
     }
 }, envExt, preferenceRegistryExt);
 
-const apiFactory = createAPIFactory(rpc, pluginManager, envExt, new DebugExtStub(rpc), preferenceRegistryExt);
+const apiFactory = createAPIFactory(
+    rpc,
+    pluginManager,
+    envExt,
+    connectionExt,
+    new DebugExtStub(rpc, connectionExt),
+    preferenceRegistryExt);
+
 let defaultApi: typeof theia;
 
 const handler = {

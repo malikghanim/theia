@@ -63,7 +63,7 @@ export class DebugExtImpl implements DebugExt {
     private readonly onDidStartDebugSessionEmitter = new Emitter<theia.DebugSession>();
     private readonly onDidReceiveDebugSessionCustomEmitter = new Emitter<theia.DebugSessionCustomEvent>();
 
-    constructor(rpc: RPCProtocol, readonly connectionExt?: ConnectionExtImpl) {
+    constructor(rpc: RPCProtocol, readonly connectionExt: ConnectionExtImpl) {
         this.proxy = rpc.getProxy(Ext.DEBUG_MAIN);
     }
 
@@ -125,7 +125,8 @@ export class DebugExtImpl implements DebugExt {
         this.debugAdapterContributions.set(contributionId, pluginContribution);
         this.packageContributions.set(contributionId, packageContribution);
 
-        this.proxy.$registerDebugConfigurationProvider(contributionId, debugType);
+        const description: DebuggerDescription = { type: debugType, label: packageContribution.label };
+        this.proxy.$registerDebugConfigurationProvider(contributionId, description);
 
         return Disposable.create(() => {
             this.debugAdapterContributions.delete(contributionId);
@@ -207,16 +208,6 @@ export class DebugExtImpl implements DebugExt {
             this.disposables.delete(sessionId);
             return debugAdapterSession.stop();
         }
-    }
-
-    async $getDebuggerDescription(contributionId: string): Promise<DebuggerDescription> {
-        const adapterContribution = this.debugAdapterContributions.get(contributionId);
-        if (adapterContribution) {
-            const label = await adapterContribution.label || adapterContribution.type;
-            return { type: adapterContribution.type, label };
-        }
-
-        throw new Error('Debug adapter contribution not found');
     }
 
     async $getSupportedLanguages(contributionId: string): Promise<string[]> {

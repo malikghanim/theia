@@ -36,6 +36,7 @@ import { CommandRegistry } from '@theia/core/lib/common/command';
 import { PluginWebSocketChannel } from '../../common/connection';
 import { ConnectionMainImpl } from './connection-main';
 import { Deferred } from '@theia/core/lib/common/promise-util';
+import { DebuggerDescription } from '@theia/debug/lib/common/debug-service';
 
 export class DebugMainImpl implements DebugMain {
     private readonly debugExt: DebugExt;
@@ -81,8 +82,7 @@ export class DebugMainImpl implements DebugMain {
         this.debugConsoleSession.appendLine(value);
     }
 
-    async $registerDebugConfigurationProvider(contributorId: string, debugType: string): Promise<void> {
-        const description = await this.debugExt.$getDebuggerDescription(contributorId);
+    async $registerDebugConfigurationProvider(contributorId: string, description: DebuggerDescription): Promise<void> {
         const sessionIdDeferred = new Deferred<string>();
 
         const proxyContributor: DebugPluginContributor = {
@@ -111,7 +111,7 @@ export class DebugMainImpl implements DebugMain {
         };
 
         this.proxyContributors.set(contributorId, proxyContributor);
-        this.contributionManager.registerDebugPluginContributor(debugType, proxyContributor);
+        this.contributionManager.registerDebugPluginContributor(description.type, proxyContributor);
     }
 
     async $unregisterDebugConfigurationProvider(contributorId: string): Promise<void> {
