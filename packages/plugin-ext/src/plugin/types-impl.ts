@@ -1365,3 +1365,9 @@ export class FunctionBreakpoint extends Breakpoint {
         return this._functionName;
     }
 }
+
+export enum ProgressLocation {
+    SourceControl = 1,
+    Window = 10,
+    Notification = 15
+}

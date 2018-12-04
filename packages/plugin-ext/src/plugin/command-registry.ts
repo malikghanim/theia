@@ -61,6 +61,7 @@ export class CommandRegistryImpl implements CommandRegistryExt {
         }
         this.commands.set(commandId, handler);
         return Disposable.create(() => {
+            this.commands.delete(commandId);
             this.proxy.$unregisterCommand(commandId);
         });
     }

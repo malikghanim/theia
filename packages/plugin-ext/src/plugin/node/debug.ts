@@ -41,6 +41,7 @@ import { IWebSocket } from 'vscode-ws-jsonrpc';
 import { ChildProcess, spawn, fork } from 'child_process';
 import { ConnectionExtImpl } from '../connection-ext';
 import { PluginWebSocketChannel } from '../../common/connection';
+import { CommandRegistryImpl } from '../command-registry';
 
 /**
  * It is supposed to work at node.
@@ -54,6 +55,9 @@ export class DebugExtImpl implements DebugExt {
     private debugAdapterContributions = new Map<string, DebugAdapterContribution>();
     private packageContributions = new Map<string, PluginPackageDebuggersContribution>();
 
+    private connectionExt: ConnectionExtImpl;
+    private commandRegistryExt: CommandRegistryImpl;
+
     private proxy: DebugMain;
     private _breakpoints: theia.Breakpoint[] = [];
     private _activeDebugSession: theia.DebugSession | undefined;
@@ -63,8 +67,13 @@ export class DebugExtImpl implements DebugExt {
     private readonly onDidStartDebugSessionEmitter = new Emitter<theia.DebugSession>();
     private readonly onDidReceiveDebugSessionCustomEmitter = new Emitter<theia.DebugSessionCustomEvent>();
 
-    constructor(rpc: RPCProtocol, readonly connectionExt: ConnectionExtImpl) {
+    constructor(rpc: RPCProtocol) {
         this.proxy = rpc.getProxy(Ext.DEBUG_MAIN);
+    }
+
+    inject(connectionExt: ConnectionExtImpl, commandRegistryExt: CommandRegistryImpl) {
+        this.connectionExt = connectionExt;
+        this.commandRegistryExt = commandRegistryExt;
     }
 
     get onDidReceiveDebugSessionCustomEvent(): theia.Event<theia.DebugSessionCustomEvent> {
@@ -177,7 +186,11 @@ export class DebugExtImpl implements DebugExt {
 
             let executable: DebugAdapterExecutable;
             if (packageContribution && packageContribution.adapterExecutableCommand !== undefined) {
-                executable = await this.proxy.$executeCommand(packageContribution.adapterExecutableCommand);
+                const result = await this.commandRegistryExt.executeCommand<DebugAdapterExecutable>(packageContribution.adapterExecutableCommand, []);
+                if (!result) {
+                    throw new Error('It is not possible to provide DebugAdapterExecutable');
+                }
+                executable = result as DebugAdapterExecutable;
             } else if (adapterContribution.provideDebugAdapterExecutable) {
                 executable = await adapterContribution.provideDebugAdapterExecutable(debugConfiguration);
             } else {
@@ -195,6 +208,7 @@ export class DebugExtImpl implements DebugExt {
 
             const disposable = session.onDidReceiveDebugSessionCustomEvent(event => this.onDidReceiveDebugSessionCustomEmitter.fire(event));
             this.disposables.set(sessionId, new DisposableCollection(disposable));
+            return sessionId;
         }
 
         throw new Error('Debug adapter contribution not found');

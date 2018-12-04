@@ -78,7 +78,8 @@ import {
     FileChangeType,
     Breakpoint,
     SourceBreakpoint,
-    FunctionBreakpoint
+    FunctionBreakpoint,
+    ProgressLocation
 } from './types-impl';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
 import { TextEditorsExtImpl } from './text-editors';
@@ -106,7 +107,6 @@ export function createAPIFactory(
     rpc: RPCProtocol,
     pluginManager: PluginManager,
     envExt: EnvExtImpl,
-    connectionExt: ConnectionExtImpl,
     debugExt: DebugExtImpl,
     preferenceRegistryExt: PreferenceRegistryExtImpl): PluginAPIFactory {
 
@@ -129,6 +129,7 @@ export function createAPIFactory(
     const webviewExt = rpc.set(MAIN_RPC_CONTEXT.WEBVIEWS_EXT, new WebviewsExtImpl(rpc));
     const connectionExt = rpc.set(MAIN_RPC_CONTEXT.CONNECTION_EXT, new ConnectionExtImpl(rpc));
 
+    debugExt.inject(connectionExt, commandRegistry);
     rpc.set(MAIN_RPC_CONTEXT.DEBUG_EXT, debugExt);
 
     return function (plugin: InternalPlugin): typeof theia {

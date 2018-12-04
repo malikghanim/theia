@@ -48,7 +48,7 @@ export class PluginWebSocketChannel implements IWebSocket {
     }
 
     onClose(cb: (code: number, reason: string) => void): void {
-        this.onClose(cb);
+        this.connection.reader.onClose(() => cb(-1, 'closed'));
     }
 
     dispose(): void {

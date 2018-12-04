@@ -2382,6 +2382,18 @@ declare module '@theia/plugin' {
          */
         subscriptions: { dispose(): any }[];
 
+		/**
+		 * A memento object that stores state in the context
+		 * of the currently opened [workspace](#workspace.workspaceFolders).
+		 */
+        workspaceState: Memento;
+
+		/**
+		 * A memento object that stores state independent
+		 * of the current opened [workspace](#workspace.workspaceFolders).
+		 */
+        globalState: Memento;
+
         /**
          * The absolute file path of the directory containing the extension.
          */
@@ -6138,5 +6150,99 @@ declare module '@theia/plugin' {
          * An optional selection to apply for the document in the [editor](#TextEditor).
          */
         selection?: Range;
+    }
+
+	/**
+	 * A memento represents a storage utility. It can store and retrieve
+	 * values.
+	 */
+    export interface Memento {
+
+		/**
+		 * Return a value.
+		 *
+		 * @param key A string.
+		 * @return The stored value or `undefined`.
+		 */
+        get<T>(key: string): T | undefined;
+
+		/**
+		 * Return a value.
+		 *
+		 * @param key A string.
+		 * @param defaultValue A value that should be returned when there is no
+		 * value (`undefined`) with the given key.
+		 * @return The stored value or the defaultValue.
+		 */
+        get<T>(key: string, defaultValue: T): T;
+
+		/**
+		 * Store a value. The value must be JSON-stringifyable.
+		 *
+		 * @param key A string.
+		 * @param value A value. MUST not contain cyclic references.
+		 */
+        update(key: string, value: any): Thenable<void>;
+    }
+
+    /**
+     * Defines a generalized way of reporting progress updates.
+     */
+    export interface Progress<T> {
+
+        /**
+         * Report a progress update.
+         * @param value A progress item, like a message and/or an
+         * report on how much work finished
+         */
+        report(value: T): void;
+    }
+
+    /**
+     * A location in the editor at which progress information can be shown. It depends on the
+     * location how progress is visually represented.
+     */
+    export enum ProgressLocation {
+
+        /**
+         * Show progress for the source control viewlet, as overlay for the icon and as progress bar
+         * inside the viewlet (when visible). Neither supports cancellation nor discrete progress.
+         */
+        SourceControl = 1,
+
+        /**
+         * Show progress in the status bar of the editor. Neither supports cancellation nor discrete progress.
+         */
+        Window = 10,
+
+        /**
+         * Show progress as notification with an optional cancel button. Supports to show infinite and discrete progress.
+         */
+        Notification = 15
+    }
+
+    /**
+     * Value-object describing where and how progress should show.
+     */
+    export interface ProgressOptions {
+
+        /**
+         * The location at which progress should show.
+         */
+        location: ProgressLocation;
+
+        /**
+         * A human-readable string which will be used to describe the
+         * operation.
+         */
+        title?: string;
+
+        /**
+         * Controls if a cancel button should show to allow the user to
+         * cancel the long running operation.  Note that currently only
+         * `ProgressLocation.Notification` is supporting to show a cancel
+         * button.
+         */
+        cancellable?: boolean;
     }
 }

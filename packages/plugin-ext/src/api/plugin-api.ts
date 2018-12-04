@@ -891,7 +891,6 @@ export interface DebugMain {
     $unregisterDebugConfigurationProvider(contributorId: string): Promise<void>;
     $addBreakpoints(breakpoints: Breakpoint[]): Promise<void>;
     $removeBreakpoints(breakpoints: Breakpoint[]): Promise<void>;
-    $executeCommand(commandId: string): Promise<any>;
 }
 
 export const PLUGIN_RPC_CONTEXT = {

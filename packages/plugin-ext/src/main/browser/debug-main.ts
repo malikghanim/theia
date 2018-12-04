@@ -32,7 +32,6 @@ import { DebugConsoleSession } from '@theia/debug/lib/browser/console/debug-cons
 import { SourceBreakpoint } from '@theia/debug/lib/browser/breakpoint/breakpoint-marker';
 import { DebugPluginContributor, DebugContributionManager } from '@theia/debug/lib/browser/debug-contribution-manager';
 import { DebugConfiguration } from '@theia/debug/lib/common/debug-configuration';
-import { CommandRegistry } from '@theia/core/lib/common/command';
 import { PluginWebSocketChannel } from '../../common/connection';
 import { ConnectionMainImpl } from './connection-main';
 import { Deferred } from '@theia/core/lib/common/promise-util';
@@ -47,7 +46,6 @@ export class DebugMainImpl implements DebugMain {
     private readonly breakpointsManager: BreakpointManager;
     private readonly debugConsoleSession: DebugConsoleSession;
     private readonly contributionManager: DebugContributionManager;
-    private readonly commandRegistry: CommandRegistry;
 
     // registered plugins per contributorId
     private readonly proxyContributors = new Map<string, DebugPluginContributor>();
@@ -60,7 +58,6 @@ export class DebugMainImpl implements DebugMain {
         this.editorManager = container.get(EditorManager);
         this.breakpointsManager = container.get(BreakpointManager);
         this.debugConsoleSession = container.get(DebugConsoleSession);
-        this.commandRegistry = container.get(CommandRegistry);
 
         // TODO: distinguish added/deleted breakpoints
         this.breakpointsManager.onDidChangeMarkers(uri => {
@@ -128,10 +125,6 @@ export class DebugMainImpl implements DebugMain {
 
     async $removeBreakpoints(breakpoints: Breakpoint[]): Promise<void> {
         this.sessionManager.removeBreakpoints(this.toInternalBreakpoints(breakpoints));
-    }
-
-    async $executeCommand(commandId: string): Promise<any> {
-        return this.commandRegistry.executeCommand(commandId);
     }
 
     private toInternalBreakpoints(breakpoints: Breakpoint[]): DebugBreakpoint[] {
