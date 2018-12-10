@@ -54,8 +54,13 @@
             "name": "Launch Backend",
             "program": "${workspaceRoot}/examples/browser/src-gen/backend/main.js",
             "args": [
+<<<<<<< HEAD
                 "--log-level=debug",
                 "--port=3030",
+=======
+                "--hostname=0.0.0.0",
+                "--port=3000",
+>>>>>>> 558d4b5386967d0bdd380d29b0980e4a11df8354
                 "--no-cluster",
                 "--app-project-path=${workspaceRoot}/examples/browser",
                 "--no-app-auto-install"

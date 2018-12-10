@@ -14,13 +14,16 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import { EditorPosition, Selection, Position, DecorationOptions, WorkspaceEditDto, ResourceTextEditDto, ResourceFileEditDto } from '../api/plugin-api';
+import { EditorPosition, Selection, Position, DecorationOptions, WorkspaceEditDto, ResourceTextEditDto, ResourceFileEditDto, TaskDto, ProcessTaskDto } from '../api/plugin-api';
 import * as model from '../api/model';
 import * as theia from '@theia/plugin';
 import * as types from './types-impl';
 import { LanguageSelector, LanguageFilter, RelativePattern } from './languages';
 import { isMarkdownString } from './markdown-string';
 import URI from 'vscode-uri';
+
+const SIDE_GROUP = -2;
+const ACTIVE_GROUP = -1;
 
 export function toViewColumn(ep?: EditorPosition): theia.ViewColumn | undefined {
     if (typeof ep !== 'number') {
@@ -36,6 +39,18 @@ export function toViewColumn(ep?: EditorPosition): theia.ViewColumn | undefined 
     }
 
     return undefined;
+}
+
+export function fromViewColumn(column?: theia.ViewColumn): number {
+    if (typeof column === 'number' && column >= types.ViewColumn.One) {
+        return column - 1;
+    }
+
+    if (column! === <number>types.ViewColumn.Beside) {
+        return SIDE_GROUP;
+    }
+
+    return ACTIVE_GROUP;
 }
 
 export function toSelection(selection: Selection): types.Selection {
@@ -455,24 +470,110 @@ export function fromDocumentSymbol(info: theia.DocumentSymbol): model.DocumentSy
     return result;
 }
 
-export function toDocumentSymbol(info: model.DocumentSymbol): theia.DocumentSymbol {
-    const result = new types.DocumentSymbol(
-        info.name,
-        info.detail,
-        SymbolKind.toSymbolKind(info.kind),
-        toRange(info.range),
-        toRange(info.selectionRange),
-    );
-    if (info.children) {
-        result.children = info.children.map(toDocumentSymbol) as any;
-    }
-    return result;
-}
-
 export function toWorkspaceFolder(folder: model.WorkspaceFolder): theia.WorkspaceFolder {
     return {
         uri: URI.revive(folder.uri),
         name: folder.name,
         index: folder.index
     };
+}
+
+export function fromTask(task: theia.Task): TaskDto | undefined {
+    if (!task) {
+        return undefined;
+    }
+
+    const taskDto = {} as TaskDto;
+    taskDto.label = task.name;
+
+    const taskDefinition = task.definition;
+    if (!taskDefinition) {
+        return taskDto;
+    }
+
+    taskDto.type = taskDefinition.type;
+    for (const key in taskDefinition) {
+        if (taskDefinition.hasOwnProperty(key)) {
+            taskDto[key] = taskDefinition[key];
+        }
+    }
+
+    const execution = task.execution;
+    if (!execution) {
+        return taskDto;
+    }
+
+    const processTaskDto = taskDto as ProcessTaskDto;
+    if (taskDefinition.type === 'shell') {
+        return fromShellExecution(execution, processTaskDto);
+    }
+
+    if (taskDefinition.type === 'process') {
+        return fromProcessExecution(<theia.ProcessExecution> execution, processTaskDto);
+    }
+
+    return processTaskDto;
+}
+
+export function fromProcessExecution(execution: theia.ProcessExecution, processTaskDto: ProcessTaskDto): ProcessTaskDto {
+    processTaskDto.command = execution.process;
+    processTaskDto.args = execution.args;
+
+    const options = execution.options;
+    if (options) {
+        processTaskDto.cwd = options.cwd;
+        processTaskDto.options = options;
+    }
+    return processTaskDto;
+}
+
+export function fromShellExecution(execution: theia.ShellExecution, processTaskDto: ProcessTaskDto): ProcessTaskDto {
+    const options = execution.options;
+    if (options) {
+        processTaskDto.cwd = options.cwd;
+        processTaskDto.args = options.shellArgs;
+        processTaskDto.options = options;
+    }
+
+    const commandLine = execution.commandLine;
+    if (commandLine) {
+        const args = commandLine.split(' ');
+        const taskCommand = args.shift();
+
+        if (taskCommand) {
+            processTaskDto.command = taskCommand;
+        }
+
+        processTaskDto.args = args;
+        return processTaskDto;
+    }
+
+    const command = execution.command;
+    if (typeof command === 'string') {
+        processTaskDto.command = command;
+        processTaskDto.args = getShellArgs(execution.args);
+        return processTaskDto;
+    } else {
+        throw new Error('Converting ShellQuotedString command is not implemented');
+    }
+}
+
+export function getShellArgs(args: undefined | (string | theia.ShellQuotedString)[]): string[] {
+    if (!args || args.length === 0) {
+        return [];
+    }
+
+    const element = args[0];
+    if (typeof element === 'string') {
+        return args as string[];
+    }
+
+    const result: string[] = [];
+    const shellQuotedArgs = args as theia.ShellQuotedString[];
+
+    shellQuotedArgs.forEach(arg => {
+        result.push(arg.value);
+    });
+
+    return result;
 }
