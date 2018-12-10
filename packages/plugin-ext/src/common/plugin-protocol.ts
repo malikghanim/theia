@@ -110,6 +110,7 @@ export interface DebugAdapterConfiguration {
     type: string,
     request: string,
     name: string
+    // tslint:disable-next-line:no-any
     [key: string]: any
 }
 

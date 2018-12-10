@@ -37,9 +37,9 @@ export interface DebugConfiguration {
      */
     [key: string]: any;
 
-	/**
-	 * The request type of the debug adapter session.
-	 */
+    /**
+     * The request type of the debug adapter session.
+     */
     request: string;
 
     /**

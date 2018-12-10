@@ -78,8 +78,7 @@ import {
     FileChangeType,
     Breakpoint,
     SourceBreakpoint,
-    FunctionBreakpoint,
-    ProgressLocation
+    FunctionBreakpoint
 } from './types-impl';
 import { EditorsAndDocumentsExtImpl } from './editors-and-documents';
 import { TextEditorsExtImpl } from './text-editors';
@@ -99,7 +98,6 @@ import { MarkdownString } from './markdown-string';
 import { TreeViewsExtImpl } from './tree/tree-views';
 import { ConnectionExtImpl } from './connection-ext';
 import { WebviewsExtImpl } from './webviews';
-import { DebugExtImpl } from './debug/debug';
 import { DebugExtImpl } from './node/debug';
 import { PluginPackageDebuggersContribution } from '../common';
 

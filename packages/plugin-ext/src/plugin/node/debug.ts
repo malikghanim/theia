@@ -144,6 +144,7 @@ export class DebugExtImpl implements DebugExt {
         });
     }
 
+    // tslint:disable-next-line:no-any
     $onSessionCustomEvent(sessionId: string, event: string, body?: any): void {
         const session = this.debugSessions.get(sessionId);
         if (session) {
@@ -184,7 +185,7 @@ export class DebugExtImpl implements DebugExt {
         if (adapterContribution) {
             const packageContribution = this.packageContributions.get(contributionId);
 
-            let executable: DebugAdapterExecutable;
+            let executable: DebugAdapterExecutable | undefined;
             if (packageContribution && packageContribution.adapterExecutableCommand !== undefined) {
                 const result = await this.commandRegistryExt.executeCommand<DebugAdapterExecutable>(packageContribution.adapterExecutableCommand, []);
                 if (!result) {
@@ -193,7 +194,9 @@ export class DebugExtImpl implements DebugExt {
                 executable = result as DebugAdapterExecutable;
             } else if (adapterContribution.provideDebugAdapterExecutable) {
                 executable = await adapterContribution.provideDebugAdapterExecutable(debugConfiguration);
-            } else {
+            }
+
+            if (!executable) {
                 throw new Error('It is not possible to provide DebugAdapterExecutable');
             }
 
@@ -344,6 +347,7 @@ class PluginDebugSession extends DebugAdapterSessionImpl implements theia.DebugS
         super.send(message);
     }
 
+    // tslint:disable-next-line:no-any
     async customRequest(command: string, args?: any): Promise<any> {
         const request: DebugProtocol.Request = {
             type: 'request',

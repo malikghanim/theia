@@ -236,4 +236,8 @@ export class VSCodeDebugAdapterContribution implements DebugAdapterContribution 
         };
     }
 
+    async getExtensionPackage(): Promise<VSCodeExtensionPackage> {
+        return this.pck;
+    }
+
 }

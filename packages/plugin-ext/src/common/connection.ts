@@ -39,10 +39,12 @@ export class PluginWebSocketChannel implements IWebSocket {
         this.connection.writer.write(content);
     }
 
+    // tslint:disable-next-line:no-any
     onMessage(cb: (data: any) => void): void {
         this.connection.reader.listen(cb);
     }
 
+    // tslint:disable-next-line:no-any
     onError(cb: (reason: any) => void): void {
         this.connection.reader.onError(e => cb(e));
     }

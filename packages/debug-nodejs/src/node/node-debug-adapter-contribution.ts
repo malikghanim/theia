@@ -53,7 +53,7 @@ export class NodeDebugAdapterContribution implements DebugAdapterContribution {
         return this.delegated.getConfigurationSnippets();
     }
 
-    async provideDebugAdapterExecutable(): Promise<DebugAdapterExecutable> {
+    async provideDebugAdapterExecutable(): Promise<DebugAdapterExecutable | undefined> {
         return this.delegated.provideDebugAdapterExecutable();
     }
 
@@ -140,7 +140,7 @@ export class Node2DebugAdapterContribution implements DebugAdapterContribution {
         return this.delegated.getConfigurationSnippets();
     }
 
-    async provideDebugAdapterExecutable(): Promise<DebugAdapterExecutable> {
+    async provideDebugAdapterExecutable(): Promise<DebugAdapterExecutable | undefined> {
         return this.delegated.provideDebugAdapterExecutable();
     }
 }
