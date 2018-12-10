@@ -36,12 +36,12 @@ import { VSCodeDebugAdapterContribution } from '@theia/debug/lib/node/vscode/vsc
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { PluginPackageDebuggersContribution } from '../../common';
 import { DebugAdapterSessionImpl } from '@theia/debug/lib/node/debug-adapter-session';
-import { DisposableCollection } from '@theia/core/lib/common/disposable';
-import { IWebSocket } from 'vscode-ws-jsonrpc';
 import { ChildProcess, spawn, fork } from 'child_process';
 import { ConnectionExtImpl } from '../connection-ext';
 import { CommandRegistryImpl } from '../command-registry';
 import { PluginWebSocketChannel } from '../../common/connection';
+
+// tslint:disable:no-any
 
 /**
  * It is supposed to work at node.
@@ -49,7 +49,6 @@ import { PluginWebSocketChannel } from '../../common/connection';
 export class DebugExtImpl implements DebugExt {
     // debug sessions by sessionId
     private debugSessions = new Map<string, PluginDebugSession>();
-    private disposables = new Map<string, DisposableCollection>();
 
     // contributions by contributorId
     private debugAdapterContributions = new Map<string, DebugAdapterContribution>();
@@ -120,7 +119,7 @@ export class DebugExtImpl implements DebugExt {
     }
 
     startDebugging(folder: theia.WorkspaceFolder | undefined, nameOrConfiguration: string | theia.DebugConfiguration): Thenable<boolean> {
-        return Promise.resolve(true);
+        return this.proxy.$startDebugging(folder, nameOrConfiguration);
     }
 
     registerDebugConfigurationProvider(
@@ -203,14 +202,16 @@ export class DebugExtImpl implements DebugExt {
             const communicationProvider = startDebugAdapter(executable);
 
             const sessionId = uuid.v4();
-            const session = new PluginDebugSession(sessionId, debugConfiguration, communicationProvider);
+            const session = new PluginDebugSession(
+                sessionId,
+                debugConfiguration,
+                communicationProvider,
+                (command: string, args?: any) => this.proxy.$customRequest(command, args));
             this.debugSessions.set(sessionId, session);
 
             const connection = await this.connectionExt!.ensureConnection(sessionId);
             session.start(new PluginWebSocketChannel(connection));
 
-            const disposable = session.onDidReceiveDebugSessionCustomEvent(event => this.onDidReceiveDebugSessionCustomEmitter.fire(event));
-            this.disposables.set(sessionId, new DisposableCollection(disposable));
             return sessionId;
         }
 
@@ -221,8 +222,6 @@ export class DebugExtImpl implements DebugExt {
         const debugAdapterSession = this.debugSessions.get(sessionId);
         if (debugAdapterSession) {
             this.debugSessions.delete(sessionId);
-            this.disposables.get(sessionId)!.dispose();
-            this.disposables.delete(sessionId);
             return debugAdapterSession.stop();
         }
     }
@@ -315,48 +314,16 @@ class PluginDebugSession extends DebugAdapterSessionImpl implements theia.DebugS
     readonly type: string;
     readonly name: string;
 
-    seq = 1000000;
-
-    private readonly onDidReceiveDebugSessionCustomEmitter = new Emitter<theia.DebugSessionCustomEvent>();
-    get onDidReceiveDebugSessionCustomEvent(): theia.Event<theia.DebugSessionCustomEvent> {
-        return this.onDidReceiveDebugSessionCustomEmitter.event;
-    }
-
     constructor(
         readonly id: string,
         readonly configuration: theia.DebugConfiguration,
-        readonly communicationProvider: CommunicationProvider) {
+        readonly communicationProvider: CommunicationProvider,
+        readonly customRequest: (command: string, args?: any) => Promise<DebugProtocol.Response>) {
 
         super(id, communicationProvider);
 
         this.type = configuration.type;
         this.name = configuration.name;
-    }
-
-    async start(channel: IWebSocket): Promise<void> {
-        super.start(channel);
-    }
-
-    protected send(message: string): void {
-        const protocolMessage = JSON.parse(message) as DebugProtocol.ProtocolMessage;
-        if (protocolMessage.type === 'event') {
-            const event = protocolMessage as DebugProtocol.Event;
-            this.onDidReceiveDebugSessionCustomEmitter.fire({ session: this, ...event });
-        }
-
-        super.send(message);
-    }
-
-    // tslint:disable-next-line:no-any
-    async customRequest(command: string, args?: any): Promise<any> {
-        const request: DebugProtocol.Request = {
-            type: 'request',
-            seq: this.seq++,
-            command,
-            arguments: args
-        };
-
-        super.write(JSON.stringify(request));
     }
 }
 

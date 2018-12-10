@@ -33,7 +33,7 @@ import { OutputChannelManager, OutputChannel } from '@theia/output/lib/common/ou
 import { DebugPreferences } from './debug-preferences';
 import { DebugSessionConnection } from './debug-session-connection';
 import { IWebSocket } from 'vscode-ws-jsonrpc/lib/socket/socket';
-import { DebugSessionContributionRegistry } from './debug-session-contribution-registory';
+import { DebugSessionContributionRegistry } from './debug-session-contribution-registry';
 
 /**
  * Manages both extension and plugin debuggers contributions

@@ -31,7 +31,7 @@ import URI from '@theia/core/lib/common/uri';
 import { VariableResolverService } from '@theia/variable-resolver/lib/browser';
 import { DebugSessionOptions, InternalDebugSessionOptions } from './debug-session-options';
 import { DebugContributionManager } from './debug-contribution-manager';
-import { DebugSessionContributionRegistry } from './debug-session-contribution-registory';
+import { DebugSessionContributionRegistry } from './debug-session-contribution-registry';
 
 export interface DidChangeActiveDebugSession {
     previous: DebugSession | undefined

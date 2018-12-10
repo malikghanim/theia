@@ -55,6 +55,7 @@ import { ExtPluginApi } from '../common/plugin-ext-api-contribution';
 import { CancellationToken, Progress, ProgressOptions } from '@theia/plugin';
 import { IJSONSchema, IJSONSchemaSnippet } from '@theia/core/lib/common/json-schema';
 import { DebuggerDescription } from '@theia/debug/lib/common/debug-service';
+import { DebugProtocol } from 'vscode-debugprotocol';
 
 export interface PluginInitData {
     plugins: PluginMetadata[];
@@ -891,6 +892,8 @@ export interface DebugMain {
     $unregisterDebugConfigurationProvider(contributorId: string): Promise<void>;
     $addBreakpoints(breakpoints: Breakpoint[]): Promise<void>;
     $removeBreakpoints(breakpoints: Breakpoint[]): Promise<void>;
+    $startDebugging(folder: theia.WorkspaceFolder | undefined, nameOrConfiguration: string | theia.DebugConfiguration): Promise<boolean>;
+    $customRequest(command: string, args?: any): Promise<DebugProtocol.Response>;
 }
 
 export const PLUGIN_RPC_CONTEXT = {

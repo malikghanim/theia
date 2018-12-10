@@ -36,7 +36,7 @@ import { DebugEditorModelFactory, DebugEditorModel } from './editor/debug-editor
 import { DebugContributionManager } from './debug-contribution-manager';
 import './debug-monaco-contribution';
 import { bindDebugPreferences } from './debug-preferences';
-import { DebugSessionContributionRegistry } from './debug-session-contribution-registory';
+import { DebugSessionContributionRegistry } from './debug-session-contribution-registry';
 
 export default new ContainerModule((bind: interfaces.Bind) => {
     bindContributionProvider(bind, DebugSessionContribution);

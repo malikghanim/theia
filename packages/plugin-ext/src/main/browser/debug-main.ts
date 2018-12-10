@@ -14,6 +14,8 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
+// tslint:disable:no-any
+
 import { interfaces } from 'inversify';
 import { RPCProtocol } from '../../api/rpc-protocol';
 import {
@@ -22,7 +24,7 @@ import {
     MAIN_RPC_CONTEXT
 } from '../../api/plugin-api';
 import { DebugSessionManager } from '@theia/debug/lib/browser/debug-session-manager';
-import { Breakpoint } from '../../api/model';
+import { Breakpoint, WorkspaceFolder } from '../../api/model';
 import { LabelProvider } from '@theia/core/lib/browser';
 import { EditorManager } from '@theia/editor/lib/browser';
 import { BreakpointManager } from '@theia/debug/lib/browser/breakpoint/breakpoint-manager';
@@ -36,6 +38,8 @@ import { PluginWebSocketChannel } from '../../common/connection';
 import { ConnectionMainImpl } from './connection-main';
 import { Deferred } from '@theia/core/lib/common/promise-util';
 import { DebuggerDescription } from '@theia/debug/lib/common/debug-service';
+import { DebugProtocol } from 'vscode-debugprotocol';
+import { DebugConfigurationManager } from '@theia/debug/lib/browser/debug-configuration-manager';
 
 export class DebugMainImpl implements DebugMain {
     private readonly debugExt: DebugExt;
@@ -46,6 +50,7 @@ export class DebugMainImpl implements DebugMain {
     private readonly breakpointsManager: BreakpointManager;
     private readonly debugConsoleSession: DebugConsoleSession;
     private readonly contributionManager: DebugContributionManager;
+    private readonly configurationManager: DebugConfigurationManager;
 
     // registered plugins per contributorId
     private readonly proxyContributors = new Map<string, DebugPluginContributor>();
@@ -58,6 +63,7 @@ export class DebugMainImpl implements DebugMain {
         this.editorManager = container.get(EditorManager);
         this.breakpointsManager = container.get(BreakpointManager);
         this.debugConsoleSession = container.get(DebugConsoleSession);
+        this.configurationManager = container.get(DebugConfigurationManager);
 
         // TODO: distinguish added/deleted breakpoints
         this.breakpointsManager.onDidChangeMarkers(uri => {
@@ -69,6 +75,7 @@ export class DebugMainImpl implements DebugMain {
         this.sessionManager.onDidCreateDebugSession(debugSession => this.debugExt.$sessionDidCreate(debugSession.id));
         this.sessionManager.onDidDestroyDebugSession(debugSession => this.debugExt.$sessionDidDestroy(debugSession.id));
         this.sessionManager.onDidChangeActiveDebugSession(event => this.debugExt.$sessionDidChange(event.current && event.current.id));
+        this.sessionManager.onDidReceiveDebugSessionCustomEvent(event => this.debugExt.$onSessionCustomEvent(event.session.id, event.event, event.body));
     }
 
     async $appendToDebugConsole(value: string): Promise<void> {
@@ -125,6 +132,41 @@ export class DebugMainImpl implements DebugMain {
 
     async $removeBreakpoints(breakpoints: Breakpoint[]): Promise<void> {
         this.sessionManager.removeBreakpoints(this.toInternalBreakpoints(breakpoints));
+    }
+
+    async $customRequest(sessionId: string, command: string, args?: any): Promise<DebugProtocol.Response> {
+        const session = this.sessionManager.getSession(sessionId);
+        if (session) {
+            return session.sendCustomRequest(command, args);
+        }
+
+        throw new Error(`Debug session '${sessionId}' not found`);
+    }
+
+    async $startDebugging(folder: WorkspaceFolder | undefined, nameOrConfiguration: string | DebugConfiguration): Promise<boolean> {
+        let configuration: DebugConfiguration | undefined;
+
+        if (typeof nameOrConfiguration === 'string') {
+            for (const options of this.configurationManager.all) {
+                if (options.configuration.name === nameOrConfiguration) {
+                    configuration = options.configuration;
+                }
+            }
+        } else {
+            configuration = nameOrConfiguration;
+        }
+
+        if (!configuration) {
+            console.error(`There is no debug configuration for ${nameOrConfiguration}`);
+            return false;
+        }
+
+        const session = await this.sessionManager.start({
+            configuration,
+            workspaceFolderUri: folder && URI.revive(folder.uri).toString()
+        });
+
+        return !!session;
     }
 
     private toInternalBreakpoints(breakpoints: Breakpoint[]): DebugBreakpoint[] {
