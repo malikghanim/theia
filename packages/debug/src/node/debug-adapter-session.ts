@@ -35,6 +35,7 @@ import { DisposableCollection, Disposable } from '@theia/core/lib/common/disposa
 export class DebugAdapterSessionImpl implements DebugAdapterSession {
 
     private static TWO_CRLF = '\r\n\r\n';
+    private static CONTENT_LENGTH = 'Content-Length';
 
     private readonly toDispose = new DisposableCollection();
     private channel: IWebSocket | undefined;
@@ -90,6 +91,20 @@ export class DebugAdapterSessionImpl implements DebugAdapterSession {
         this.send(JSON.stringify(event));
     }
 
+    protected sendOutput(msg: string): void {
+        const event: DebugProtocol.OutputEvent = {
+            type: 'event',
+            event: 'output',
+            seq: -1,
+            body: {
+                category: 'stderr',
+                output: msg
+            }
+        };
+
+        this.send(JSON.stringify(event));
+    }
+
     protected handleData(data: Buffer): void {
         this.buffer = Buffer.concat([this.buffer, data]);
 
@@ -106,13 +121,22 @@ export class DebugAdapterSessionImpl implements DebugAdapterSession {
                     continue;	// there may be more complete messages to process
                 }
             } else {
-                const idx = this.buffer.indexOf(DebugAdapterSessionImpl.TWO_CRLF);
+                let idx = this.buffer.indexOf(DebugAdapterSessionImpl.CONTENT_LENGTH);
+                if (idx > 0) {
+                    // log unrecognized output
+                    const output = this.buffer.slice(0, idx);
+                    console.log(output.toString('utf-8'));
+
+                    this.buffer = this.buffer.slice(idx);
+                }
+
+                idx = this.buffer.indexOf(DebugAdapterSessionImpl.TWO_CRLF);
                 if (idx !== -1) {
                     const header = this.buffer.toString('utf8', 0, idx);
                     const lines = header.split('\r\n');
                     for (let i = 0; i < lines.length; i++) {
                         const pair = lines[i].split(/: +/);
-                        if (pair[0] === 'Content-Length') {
+                        if (pair[0] === DebugAdapterSessionImpl.CONTENT_LENGTH) {
                             this.contentLength = +pair[1];
                         }
                     }

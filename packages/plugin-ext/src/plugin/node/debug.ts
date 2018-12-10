@@ -40,8 +40,8 @@ import { DisposableCollection } from '@theia/core/lib/common/disposable';
 import { IWebSocket } from 'vscode-ws-jsonrpc';
 import { ChildProcess, spawn, fork } from 'child_process';
 import { ConnectionExtImpl } from '../connection-ext';
-import { PluginWebSocketChannel } from '../../common/connection';
 import { CommandRegistryImpl } from '../command-registry';
+import { PluginWebSocketChannel } from '../../common/connection';
 
 /**
  * It is supposed to work at node.
